@@ -20,6 +20,8 @@ from fibsem.microscope import (
     _check_stage_movement,
 )
 
+logging.getLogger().setLevel(level=logging.DEBUG)
+
 TESCAN_API_AVAILABLE = False
 
 try:
