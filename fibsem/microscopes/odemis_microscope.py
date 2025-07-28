@@ -222,7 +222,7 @@ beam_type_to_odemis = {
 
 # TODO: load default system settings?
 
-class OdemisMicroscope(FibsemMicroscope):
+class OdemisThermoMicroscope(FibsemMicroscope):
     milling_progress_signal = Signal(dict)
     _last_imaging_settings: ImageSettings
 
@@ -234,7 +234,7 @@ class OdemisMicroscope(FibsemMicroscope):
         # stage
         self.stage: model.Actuator = model.getComponent(role="stage-bare")
 
-        logging.info("OdemisMicroscope initialized")
+        logging.info("OdemisThermoMicroscope initialized")
 
         # system information # TODO: split this version info properly
         software_version = self.connection.get_software_version()
@@ -964,23 +964,7 @@ class OdemisMicroscope(FibsemMicroscope):
 
 
 class OdemisTescanMicroscope(TescanMicroscope):
-
     def __init__(self, system_settings: SystemSettings = None):
         super().__init__(system_settings=system_settings)
-        # stage
-        self.stage: model.Actuator = model.getComponent(role="stage-bare")
-
-        # NOTE: Temporary workaround for dev purposes only
-        #       to provide an initialized Tescan stage since a proper config is not available yet.
-        # *** BEGIN ***
-        microscope = model.getMicroscope()
-        metadata = self.stage.getMetadata()
-        metadata_copy = deepcopy(metadata)  # Create a deep copy to avoid modifying original
-        metadata_copy[model.MD_CALIB] = { "x_0": 1.45e-3  , "y_0": 0.e-3 , "z_ct": 6.e-3 , "dx": -40.1e-3  , "dy": 0, "b_y": -0.297e-3, "pre-tilt": 0.6108652381980153, "version": "tescan_1" }
-        self.stage.updateMetadata(metadata_copy)
-        # *** END ***
-
-        self.pm = MicroscopePostureManager(microscope)
-        self.pm.cryoSwitchSamplePosition() # 
         logging.info("OdemisTescanMicroscope initialized")
 
