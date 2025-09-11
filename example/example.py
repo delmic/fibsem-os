@@ -10,7 +10,7 @@ matplotlib.use('TkAgg', force=True) # Activate 'agg' backend for off-screen plot
 def main():
 
     # connect to microscope
-    microscope, settings = utils.setup_session(manufacturer="Demo", ip_address="localhost")
+    microscope, settings = utils.setup_session(manufacturer="Tescan", ip_address="192.168.56.101")
 
     # take image with both beams
     eb_image, ib_image = acquire.take_reference_images(microscope, settings.image)

@@ -21,14 +21,14 @@ class Lamella:
 def main():
 
     PROTOCOL_PATH = os.path.join(os.path.dirname(__file__), "protocol_autolamella.yaml")
-    microscope, settings = utils.setup_session(protocol_path=PROTOCOL_PATH)
+    microscope, settings = utils.setup_session(manufacturer="Tescan", ip_address="192.168.56.101", protocol_path=PROTOCOL_PATH)
     
     # move to the milling angle
     stage_position = FibsemStagePosition(
         r=np.deg2rad(settings.protocol["stage_rotation"]),
         t=np.deg2rad(settings.protocol["stage_tilt"])
     )
-    microscope.move_stage_absolute(stage_position) # do need a safe version?
+    # microscope.move_stage_absolute(stage_position) # do need a safe version?
 
     # take a reference image    
     settings.image.filename = "grid_reference"

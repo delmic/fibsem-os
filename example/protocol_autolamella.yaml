@@ -1,7 +1,7 @@
 
 name: autolamella_demo
-stage_rotation: 50
-stage_tilt: 20
+stage_rotation: 300
+stage_tilt: 25
 
 
 fiducial:

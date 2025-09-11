@@ -201,7 +201,7 @@ def from_odemis_image(image: model.DataArray, path: str = None) -> FibsemImage:
     return FibsemImage(data=da, metadata=image_md)
 
 def load_odemis_image(path: str) -> FibsemImage:
-    """Load an odemis image from a file and convert it to a FibsemImage"""
+    """Load an Odemis image from a file and convert it to a FibsemImage"""
     acq = open_acquisition(path)
     image: FibsemImage = FibsemImage.from_odemis(acq[0], path=path)
     return image

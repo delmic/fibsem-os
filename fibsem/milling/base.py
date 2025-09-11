@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass, fields, field, asdict
+import logging
 from typing import List, Union, Dict, Any, Tuple, Optional, Type, TypeVar, ClassVar, Generic
 
 from fibsem.microscope import FibsemMicroscope
@@ -117,6 +118,7 @@ class FibsemMillingStage:
 
     @classmethod
     def from_dict(cls, data: dict):
+        logging.debug(data)
         strategy_config = data.get("strategy", {})
         strategy_name = strategy_config.get("name", "Standard")
         pattern_name = data["pattern"]["name"]
