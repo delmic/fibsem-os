@@ -26,7 +26,7 @@ TESCAN_API_AVAILABLE = False
 
 try:
     import tescanautomation
-    from tescanautomation import Automation
+    from tescanautomation.tescanautomation import Automation
     from tescanautomation.Common import Document, Bpp, Detector
     from tescanautomation.DrawBeam import IEtching, Status as DBStatus
     from tescanautomation.SEM import HVBeamStatus as SEMStatus
@@ -832,7 +832,7 @@ class TescanMicroscope(FibsemMicroscope):
         
 
     
-    def move_manipulator_relative(self,position: FibsemManipulatorPosition, name: str = None):
+    def move_manipulator_relative(self, position: FibsemManipulatorPosition, name: str = None):
         if not np.isclose(position.r, 0.0):
             rotation = True
         else:
@@ -1050,7 +1050,8 @@ class TescanMicroscope(FibsemMicroscope):
         """
         self._prepare_beam(self.milling_channel)
 
-        self.connection.DrawBeam.LoadLayer(self.layer)
+        if self.connection.DrawBeam.GetStatus()[0] == DBStatus.ProjectNotLoaded:
+            self.connection.DrawBeam.LoadLayer(self.layer)
         logging.info("running ion beam milling now...")
 
         # estimate milling time (must be done before starting milling, but after loading layer)
@@ -1063,7 +1064,7 @@ class TescanMicroscope(FibsemMicroscope):
 
         # display progress bar in tescan ui
         self.connection.Progress.Show(
-            Title="DrawBeam Milling (OpenFIBSEM)", 
+            Title="DrawBeam Milling (fibsemOS)", 
             Text="Layer 1 in progress", 
             HideButton=True, 
             Marquee=False, 
@@ -1220,17 +1221,21 @@ class TescanMicroscope(FibsemMicroscope):
         pass
 
     def estimate_milling_time(self) -> float:
-        
+
         # NOTE: we cannot load the layer again
         # load and unload layer to check time
-        # self.connection.DrawBeam.LoadLayer(self.layer)
+
+        #if self.connection.DrawBeam.GetStatus()[0] == DBStatus.ProjectNotLoaded:
+        self.connection.DrawBeam.LoadLayer(self.layer)
+        time.sleep(1)
+            
         est_time = 0
         try:
             est_time = self.connection.DrawBeam.EstimateTime()
         except Exception as e:
             logging.error(f"Error in estimating milling time: {e}")
 
-        # self.connection.DrawBeam.UnloadLayer()
+        #self.connection.DrawBeam.UnloadLayer()
 
         return est_time
 
