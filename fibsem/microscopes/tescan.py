@@ -314,7 +314,7 @@ class TescanMicroscope(FibsemMicroscope):
         self.connection = Automation(ip_address, port)
         logging.info(f"Microscope client connected to [{ip_address}:{port}]")
 
-        self._default_detector_names = {BeamType.ELECTRON: "E-T", BeamType.ION: "SE"}
+        self._default_detector_names = {BeamType.ELECTRON: "SE", BeamType.ION: "SE"}
         self._active_detector: Dict[BeamType, Detector] = {}    
 
         # TODO: use what the user specified in the configuration file
@@ -1064,8 +1064,8 @@ class TescanMicroscope(FibsemMicroscope):
 
         # display progress bar in tescan ui
         self.connection.Progress.Show(
-            Title="DrawBeam Milling (fibsemOS)", 
-            Text="Layer 1 in progress", 
+            Title="DrawBeam Milling (Odemis)", 
+            Text="Layer in progress...", 
             HideButton=True, 
             Marquee=False, 
             ProgressMin=0, ProgressMax=100
