@@ -1053,7 +1053,7 @@ class FibsemMillingSettings:
     hfw: float = 150e-6
     patterning_mode: str = "Serial"
     application_file: str = "Si"
-    preset: str = "30 keV; 2nA"
+    preset: str = "30 keV; 2 nA"
     spacing: float = 1.0
     milling_voltage: float = 30e3
     milling_channel: BeamType = BeamType.ION
