@@ -1064,7 +1064,7 @@ class TescanMicroscope(FibsemMicroscope):
 
         # display progress bar in tescan ui
         self.connection.Progress.Show(
-            Title="DrawBeam Milling (Odemis)", 
+            Title="Milling (Odemis)", 
             Text="Layer in progress...", 
             HideButton=True, 
             Marquee=False, 
@@ -1709,7 +1709,9 @@ class TescanMicroscope(FibsemMicroscope):
             if not beam.Preset.IsAvailable(value):
                 logging.warning(f"Preset {value} not available for {beam_type}.")
                 return
+            image_rotation = beam.Optics.GetImageRotation()
             beam.Preset.Activate(value)
+            beam.Optics.SetImageRotation(image_rotation)
             logging.info(f"Preset {value} activated for {beam_type}.")
             return
 
