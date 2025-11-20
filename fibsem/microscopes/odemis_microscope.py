@@ -97,17 +97,29 @@ def odemis_dict_to_stage_position(pdict: dict) -> FibsemStagePosition:
 def beam_settings_from_odemis_dict(channel: str, md: dict, wd: float) -> BeamSettings:
     c2b = {"electron": BeamType.ELECTRON, "ion": BeamType.ION}
 
-    shift = md["shift"][0]
-    stigmator = md["stigmator"][0]
+    shift = md.get("shift", [(0.0, 0.0)])[0]
+    stigmator = md.get("stigmator", [(0.0, 0.0)])[0]
+
+    beam_current = (
+        md["probeCurrent"][0]
+        if "probeCurrent" in md
+        else md["beamCurrent"][0]
+        if "beamCurrent" in md
+        else 0.0
+    )
+
+    resolution = md["resolution"][0]
+    if isinstance(resolution, tuple):
+        resolution = [resolution]
 
     return BeamSettings(
         beam_type=c2b[channel],
         working_distance=wd,
-        beam_current=md["beamCurrent"][0],
+        beam_current=beam_current,
         dwell_time=md["dwellTime"][0],
         voltage=md["accelVoltage"][0],
         hfw=md["horizontalFoV"][0],
-        resolution=md["resolution"][0],
+        resolution=resolution,
         scan_rotation=md["rotation"][0],
         shift=Point(shift[0], shift[1]),
         stigmation=Point(stigmator[0], stigmator[1]),
@@ -115,13 +127,15 @@ def beam_settings_from_odemis_dict(channel: str, md: dict, wd: float) -> BeamSet
 
 
 def detector_settings_from_odemis_dict(md: dict) -> FibsemDetectorSettings:
+    required_keys = {"type", "mode", "brightness", "contrast"}
+    if not any(key in md for key in required_keys):
+        return FibsemDetectorSettings()
     return FibsemDetectorSettings(
         type=md["type"][0],
         mode=md["mode"][0],
         brightness=md["brightness"][0],
         contrast=md["contrast"][0],
     )
-
 
 def odemis_md_to_microscope_state(md) -> MicroscopeState:
     # stage position
@@ -135,9 +149,17 @@ def odemis_md_to_microscope_state(md) -> MicroscopeState:
         wd=md["Electron-Focus"]["position"][0]["z"],
     )
 
+    ion_focus = md.get("Ion-Focus", {})
+    ion_wd = 0.0
+    if isinstance(ion_focus, dict) and "position" in ion_focus:
+        try:
+            ion_wd = ion_focus["position"][0]["z"]
+        except (IndexError, KeyError, TypeError):
+            ion_wd = 0.0
+
     # ion beam
     ibs = BeamSettings.from_odemis_dict(
-        channel="ion", md=md["Ion-Beam"], wd=md["Ion-Focus"]["position"][0]["z"]
+        channel="ion", md=md["Ion-Beam"], wd=ion_wd
     )
 
     # electron detector
