@@ -1186,13 +1186,14 @@ class TescanMicroscope(FibsemMicroscope):
             imaging_current (float): The current to use for imaging in amps.
         # """
         try:
-            default_preset = "30 keV; 150 pA"
-            self.connection.FIB.Preset.Activate(default_preset) # TODO: restore the default preset?
+            default_preset = "30 keV; 10 pA"
+            self.set("preset", default_preset, BeamType.ION)
+            #self.connection.FIB.Preset.Activate(default_preset) # TODO: restore the default preset?
             self.connection.DrawBeam.UnloadLayer()
             logging.debug(f"Finished milling, restored preset to {default_preset}")
         except Exception as e:
             logging.debug(f"Error in finish_milling: {e}")
-            pass
+            raise
 
     def stop_milling(self):
 
@@ -1710,8 +1711,12 @@ class TescanMicroscope(FibsemMicroscope):
                 logging.warning(f"Preset {value} not available for {beam_type}.")
                 return
             image_rotation = beam.Optics.GetImageRotation()
+            view_field = beam.Optics.GetViewfield()
+            image_shift_x, image_shift_y = beam.Optics.GetImageShift()
             beam.Preset.Activate(value)
             beam.Optics.SetImageRotation(image_rotation)
+            beam.Optics.SetViewfield(view_field)
+            beam.Optics.SetImageShift(image_shift_x, image_shift_y)
             logging.info(f"Preset {value} activated for {beam_type}.")
             return
 
