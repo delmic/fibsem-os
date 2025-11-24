@@ -127,15 +127,19 @@ def beam_settings_from_odemis_dict(channel: str, md: dict, wd: float) -> BeamSet
 
 
 def detector_settings_from_odemis_dict(md: dict) -> FibsemDetectorSettings:
-    required_keys = {"type", "mode", "brightness", "contrast"}
-    if not any(key in md for key in required_keys):
-        return FibsemDetectorSettings()
-    return FibsemDetectorSettings(
-        type=md["type"][0],
-        mode=md["mode"][0],
-        brightness=md["brightness"][0],
-        contrast=md["contrast"][0],
-    )
+    kwargs = {}
+    for key in ("type", "mode", "brightness", "contrast"):
+        if key not in md:
+            continue
+        value = md[key]
+        if isinstance(value, (list, tuple)):
+            if not value:
+                continue
+            kwargs[key] = value[0]
+        else:
+            kwargs[key] = value
+    return FibsemDetectorSettings(**kwargs)
+
 
 def odemis_md_to_microscope_state(md) -> MicroscopeState:
     # stage position

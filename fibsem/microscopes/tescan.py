@@ -402,6 +402,7 @@ class TescanMicroscope(FibsemMicroscope):
                 image_shape=(image_width, image_height)
             )
 
+            time.sleep(6)
             image = beam.Scan.AcquireROI(
                 Detector=self._active_detector[effective_beam_type],
                 Width=image_width,
@@ -1190,6 +1191,7 @@ class TescanMicroscope(FibsemMicroscope):
             self.set("preset", default_preset, BeamType.ION)
             #self.connection.FIB.Preset.Activate(default_preset) # TODO: restore the default preset?
             self.connection.DrawBeam.UnloadLayer()
+            self.autocontrast(BeamType.ION) # NOTE: Ideally, we can try to restore the contrast settings which were used before milling
             logging.debug(f"Finished milling, restored preset to {default_preset}")
         except Exception as e:
             logging.debug(f"Error in finish_milling: {e}")
