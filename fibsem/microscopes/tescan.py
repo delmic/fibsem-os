@@ -1189,13 +1189,15 @@ class TescanMicroscope(FibsemMicroscope):
         try:
             default_preset = "30 keV; 10 pA"
             self.set("preset", default_preset, BeamType.ION)
-            #self.connection.FIB.Preset.Activate(default_preset) # TODO: restore the default preset?
-            self.connection.DrawBeam.UnloadLayer()
+            try:
+                self.connection.DrawBeam.UnloadLayer()
+            except Exception as e:
+                logging.debug(f"No layer to unload: {e}")
             self.autocontrast(BeamType.ION) # NOTE: Ideally, we can try to restore the contrast settings which were used before milling
+            #self.autocontrast(BeamType.ELECTRON)
             logging.debug(f"Finished milling, restored preset to {default_preset}")
         except Exception as e:
             logging.debug(f"Error in finish_milling: {e}")
-            raise
 
     def stop_milling(self):
 
