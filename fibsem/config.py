@@ -56,9 +56,10 @@ DEFAULT_SQUARE_RESOLUTION = "1024x1024"
 
 MILL_HFW_THRESHOLD = 0.01  # 1.0% of the image
 
-BASE_PATH = os.path.dirname(
-    fibsem.__path__[0]
-)  # TODO: figure out a more stable way to do this
+BASE_PATH = os.path.join(
+    os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share")),
+    "fibsemos"
+)
 CONFIG_PATH = os.path.join(BASE_PATH, "fibsem", "config")
 PROTOCOL_PATH = os.path.join(CONFIG_PATH, "protocol.yaml")
 LOG_PATH = os.path.join(BASE_PATH, "fibsem", "log")
