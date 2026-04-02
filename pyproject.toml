@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "fibsem"
@@ -21,20 +21,18 @@ classifiers = [
 ]
 
 dependencies = [
-    "tifffile>=2021.7.2",
-    "numpy>=1.23.5,<2.0.0",
-    "scipy>=1.10.0",
-    "opencv-python-headless>=4.7.0.72", # TODO: test headless dependency
-    "scikit-image>=0.19.3",
-    "matplotlib>=3.7.0",
-    "tqdm>=4.65.0",
-    "pytest>=7.2.2",
+    "tifffile>=2025.5.10",
+    "numpy>=1.23.5",
+    "scipy>=1.15.3",
+    "opencv-python-headless>=4.11.0.86",
+    "scikit-image>=0.25.2",
+    "tqdm>=4.67.1",
     "petname>=2.6",
-    "pandas>=2.0.0",
-    "pyyaml>=6.0",
-    "psygnal",
-    "ome_types",
-    "lxml",
+    "pandas>=2.3.0",
+    "pyyaml>=6.0.2",
+    "psygnal>=0.13.0",
+    "ome_types>=0.3.4",
+    "lxml>=4.8.0",
 ]
 
 [project.urls]
@@ -58,7 +56,7 @@ ui = [
     "matplotlib_scalebar>=0.8.1",
 ]
 odemis = [
-    "pylibtiff"
+    "pylibtiff>=0.4.4"
 ]
 
 reporting = [
@@ -72,9 +70,3 @@ fibsem_ui = "fibsem.ui.FibsemUI:main"
 fibsem_label = "fibsem.ui.FibsemLabellingUI:main"
 fibsem-generate-config = "fibsem.configuration:gen_config_cli"
 fibsem-config-ui = "fibsem.ui.FibsemMicroscopeConfigurationWidget:main"
-
-[tool.setuptools]
-packages = ["fibsem"]
-
-[tool.setuptools.package-data]
-"*" = ["*.yaml"]
