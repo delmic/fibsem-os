@@ -318,6 +318,10 @@ class TescanMicroscope(FibsemMicroscope):
         self._last_imaging_settings: ImageSettings = ImageSettings()
         # preset active before milling started, restored by finish_milling
         self._preset_before_milling: Optional[str] = None
+        # DrawBeam.EstimateTime is only valid while a layer is loaded. Keep the
+        # SDK state explicit so an estimate made by a milling strategy can load
+        # the layer once and run_milling can reuse it.
+        self._milling_layer_loaded = False
 
         # user, experiment metadata
         # TODO: remove once db integrated
@@ -1327,8 +1331,7 @@ class TescanMicroscope(FibsemMicroscope):
         """
         self._prepare_beam(self.milling_channel)
 
-        with self._connection_lock:
-            self.connection.DrawBeam.LoadLayer(self.layer)
+        self._load_milling_layer()
         logging.info("running ion beam milling now...")
 
         # estimate milling time (must be done before starting milling, but after loading layer)
@@ -1524,6 +1527,21 @@ class TescanMicroscope(FibsemMicroscope):
                 self.connection.DrawBeam.UnloadLayer()
         except Exception as e:
             logging.debug(f"Error unloading layer: {e}")
+        finally:
+            self._milling_layer_loaded = False
+
+    def _load_milling_layer(self) -> None:
+        """Load the current DrawBeam layer once.
+
+        Tescan requires a loaded layer for ``EstimateTime``. Strategies ask for
+        an estimate before calling ``run_milling``, so loading belongs in a
+        shared helper rather than exclusively in ``run_milling``.
+        """
+        with self._connection_lock:
+            if getattr(self, "_milling_layer_loaded", False):
+                return
+            self.connection.DrawBeam.LoadLayer(self.layer)
+            self._milling_layer_loaded = True
 
     def start_milling(self) -> None:
         with self._connection_lock:
@@ -1767,18 +1785,13 @@ class TescanMicroscope(FibsemMicroscope):
         pass
 
     def estimate_milling_time(self) -> float:
-
-        # NOTE: we cannot load the layer again
-        # load and unload layer to check time
-        # self.connection.DrawBeam.LoadLayer(self.layer)
         est_time = 0
         try:
+            self._load_milling_layer()
             with self._connection_lock:
                 est_time = self.connection.DrawBeam.EstimateTime()
         except Exception as e:
             logging.error(f"Error in estimating milling time: {e}")
-
-        # self.connection.DrawBeam.UnloadLayer()
 
         return est_time
 
