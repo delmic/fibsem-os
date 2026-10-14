@@ -1,6 +1,7 @@
 import datetime
 import os
 
+import numpy as np
 import pytest
 
 from fibsem.microscopes.autoscript import THERMO_API_AVAILABLE
@@ -11,17 +12,36 @@ from fibsem.structures import (
     FibsemDetectorSettings,
     FibsemGasInjectionSettings,
     FibsemImage,
+    FibsemImageMetadata,
     FibsemRectangle,
     FibsemStagePosition,
     ImageSettings,
     MicroscopeState,
     OverviewAcquisitionSettings,
+    Point,
     ReferenceImageParameters,
     TileOrderStrategy,
 )
 
 # microscope state
 # electron_beam, electron_detector, ion_beam, ion_detector are now optional
+
+
+def test_image_without_microscope_state(tmp_path):
+    """Images without project state remain readable after export."""
+    metadata = FibsemImageMetadata(
+        image_settings=ImageSettings(),
+        pixel_size=Point(1e-6, 1e-6),
+        microscope_state=None,
+    )
+    image = FibsemImage(np.zeros((6, 8), dtype=np.uint8), metadata=metadata)
+    path = tmp_path / "reference.tif"
+    image.save(path)
+    loaded = FibsemImage.load(path)
+    assert loaded.metadata is not None
+    assert loaded.metadata.microscope_state is None
+    assert "microscope_state" not in loaded.metadata.to_dict()
+    np.testing.assert_array_equal(loaded.data, image.data)
 
 
 def test_unknown_beam_settings_roundtrip():

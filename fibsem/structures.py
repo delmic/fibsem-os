@@ -2733,7 +2733,7 @@ class FibsemImageMetadata:
 
     image_settings: ImageSettings
     pixel_size: Point
-    microscope_state: MicroscopeState
+    microscope_state: Optional[MicroscopeState]
     # Both replaced `system: Optional[SystemSettings]` in v6 (FIB-481). Optional
     # because a file written before v6 may carry neither in a recoverable form, and
     # because a FibsemImage can be constructed without a microscope at all.
@@ -2836,9 +2836,10 @@ class FibsemImageMetadata:
 
         image_settings = ImageSettings.from_dict(settings["image"])
         version = settings.get("version", UNVERSIONED_METADATA)
+        pixel_size, microscope_state = None, None
         if settings["pixel_size"] is not None:
             pixel_size = Point.from_dict(settings["pixel_size"])
-        if settings["microscope_state"] is not None:
+        if settings.get("microscope_state") is not None:
             microscope_state = MicroscopeState.from_dict(settings["microscope_state"])
 
         # Presence-detection, not a version switch (FIB-445 D3): v6 writes
