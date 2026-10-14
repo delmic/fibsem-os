@@ -1278,11 +1278,11 @@ class BeamSettings:
         if "stigmation" in state_dict and state_dict["stigmation"] is not None:
             stigmation = Point.from_dict(state_dict["stigmation"])
         else:
-            stigmation = Point()
+            stigmation = None
         if "shift" in state_dict and state_dict["shift"] is not None:
             shift = Point.from_dict(state_dict["shift"])
         else:
-            shift = Point()
+            shift = None
 
         wd = state_dict.get(
             "working_distance", state_dict.get("eucentric_height", None)
@@ -1364,7 +1364,9 @@ class MicroscopeState:
         from_dict(state_dict: dict) -> "MicroscopeState": Returns a new instance of MicroscopeState with attributes created from the passed dictionary.
     """
 
-    timestamp: float = datetime.timestamp(datetime.now())
+    timestamp: Optional[float] = field(
+        default_factory=lambda: datetime.timestamp(datetime.now())
+    )
     stage_position: Optional[FibsemStagePosition] = field(
         default_factory=FibsemStagePosition
     )

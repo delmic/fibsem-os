@@ -24,6 +24,28 @@ from fibsem.structures import (
 # electron_beam, electron_detector, ion_beam, ion_detector are now optional
 
 
+def test_unknown_beam_settings_roundtrip():
+    """Loading unknown acquisition fields must preserve their missing values."""
+    beam = BeamSettings(beam_type=BeamType.ION, shift=None, stigmation=None)
+    loaded = BeamSettings.from_dict(beam.to_dict())
+    assert loaded.shift is None
+    assert loaded.stigmation is None
+
+
+def test_microscope_state_timestamp_is_created_per_instance(monkeypatch):
+    """A new state must use its creation time rather than the module import time."""
+    from fibsem import structures
+
+    class Clock:
+        now = staticmethod(lambda: 1000.0)
+        timestamp = staticmethod(lambda value: value)
+
+    monkeypatch.setattr(structures, "datetime", Clock)
+    assert MicroscopeState().timestamp == 1000.0
+    Clock.now = staticmethod(lambda: 2000.0)
+    assert MicroscopeState().timestamp == 2000.0
+
+
 def test_microscope_state():
 
     state = MicroscopeState()

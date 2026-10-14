@@ -106,54 +106,66 @@ def odemis_dict_to_stage_position(pdict: dict) -> FibsemStagePosition:
 def beam_settings_from_odemis_dict(channel: str, md: dict, wd: float) -> BeamSettings:
     c2b = {"electron": BeamType.ELECTRON, "ion": BeamType.ION}
 
-    shift = md["shift"][0]
-    stigmator = md["stigmator"][0]
+    shift = md.get("shift", [None])[0]
+    stigmator = md.get("stigmator", [None])[0]
+    current = md.get("beamCurrent", [None])[0]
+    if current is None and (channel == "electron" or "beamPreset" not in md):
+        current = md.get("probeCurrent", [None])[0]
 
     return BeamSettings(
         beam_type=c2b[channel],
         working_distance=wd,
-        beam_current=md["beamCurrent"][0],
+        beam_current=current,
         dwell_time=md["dwellTime"][0],
         voltage=md["accelVoltage"][0],
         hfw=md["horizontalFoV"][0],
         resolution=md["resolution"][0],
         scan_rotation=md["rotation"][0],
-        shift=Point(shift[0], shift[1]),
-        stigmation=Point(stigmator[0], stigmator[1]),
+        shift=Point.from_list(shift) if shift is not None else None,
+        stigmation=Point.from_list(stigmator) if stigmator is not None else None,
+        preset=md.get("beamPreset", [None])[0],
     )
 
 
 def detector_settings_from_odemis_dict(md: dict) -> FibsemDetectorSettings:
     return FibsemDetectorSettings(
-        type=md["type"][0],
-        mode=md["mode"][0],
-        brightness=md["brightness"][0],
-        contrast=md["contrast"][0],
+        type=md.get("type", [None])[0],
+        mode=md.get("mode", [None])[0],
+        brightness=md.get("brightness", [None])[0],
+        contrast=md.get("contrast", [None])[0],
     )
 
 
-def odemis_md_to_microscope_state(md) -> MicroscopeState:
+def odemis_md_to_microscope_state(md: dict) -> MicroscopeState:
+    """Convert a recorded Odemis snapshot indexed by component role.
+
+    :param md: Microscope settings captured during reference image acquisition,
+        indexed by Odemis component role rather than component name.
+    :returns: The recorded settings represented as a fibsemOS MicroscopeState.
+    """
     # stage position
-    stage_md = md["Stage"]["position"][0]
+    stage_md = md["stage-bare"]["position"][0]
     stage_position = FibsemStagePosition.from_odemis_dict(stage_md)
 
     # electron beam
     ebs = BeamSettings.from_odemis_dict(
         channel="electron",
-        md=md["Electron-Beam"],
-        wd=md["Electron-Focus"]["position"][0]["z"],
+        md=md["e-beam"],
+        wd=md.get("ebeam-focus", {}).get("position", [{}])[0].get("z"),
     )
 
     # ion beam
     ibs = BeamSettings.from_odemis_dict(
-        channel="ion", md=md["Ion-Beam"], wd=md["Ion-Focus"]["position"][0]["z"]
+        channel="ion",
+        md=md["ion-beam"],
+        wd=md.get("ion-focus", {}).get("position", [{}])[0].get("z"),
     )
 
     # electron detector
-    eds = FibsemDetectorSettings.from_odemis_dict(md["Electron-Detector"])
+    eds = FibsemDetectorSettings.from_odemis_dict(md.get("se-detector", {}))
 
     # ion detector
-    ids = FibsemDetectorSettings.from_odemis_dict(md["Ion-Detector"])
+    ids = FibsemDetectorSettings.from_odemis_dict(md.get("se-detector-ion", {}))
 
     ms = MicroscopeState(
         stage_position=stage_position,
@@ -166,41 +178,62 @@ def odemis_md_to_microscope_state(md) -> MicroscopeState:
     return ms
 
 
-def from_odemis_image(image: model.DataArray, path: str = None) -> FibsemImage:
+def from_odemis_image(
+    image: model.DataArray, system_state: dict, path: str = None
+) -> FibsemImage:
+    """Convert image data using a separate snapshot indexed by Odemis roles.
+
+    Use the recorded state for acquisition settings and fibsemOS microscope
+    metadata, leaving the original Odemis image metadata unchanged.
+
+    The system_state snapshot describes the microscope settings at acquisition
+    and is converted to FibsemImageMetadata.microscope_state. Instrument identity
+    and software versions belong to FibsemImageMetadata.system_info instead.
+
+    :param image: Odemis reference image to convert.
+    :param system_state: Recorded microscope settings indexed by Odemis component
+        role, captured during reference image acquisition.
+    :param path: Optional output file path used to set the directory and filename.
+    :returns: Image with the recorded acquisition settings in fibsemOS format.
+    """
     md = image.metadata
-    ms = MicroscopeState.from_odemis_dict(md[model.MD_EXTRA_SETTINGS])
 
     # image settings
     pixel_size = Point.from_list(md[model.MD_PIXEL_SIZE])
 
-    # TODO: this should be acq_type, but it's not saved in the metadata yet...
-    d2b = {"SEM": BeamType.ELECTRON, "FIB": BeamType.ION}
+    d2b = {
+        model.MD_AT_EM: BeamType.ELECTRON,
+        model.MD_AT_FIB: BeamType.ION,
+        "SEM": BeamType.ELECTRON,
+        "FIB": BeamType.ION,
+    }
 
-    if d2b[md[model.MD_DESCRIPTION]] is BeamType.ELECTRON:
-        sys_state = ms.electron_beam
-    if d2b[md[model.MD_DESCRIPTION]] is BeamType.ION:
-        sys_state = ms.ion_beam
+    beam_type = d2b[md.get(model.MD_ACQ_TYPE, md.get(model.MD_DESCRIPTION))]
+    beam_role = "e-beam" if beam_type is BeamType.ELECTRON else "ion-beam"
+    beam_state = system_state[beam_role]
 
     filename = None
     if path is not None:
-        path = os.path.dirname(path)
         filename = os.path.basename(path)
+        path = os.path.dirname(path)
 
     image_settings = ImageSettings(
         resolution=[image.shape[1], image.shape[0]],
-        dwell_time=sys_state.dwell_time,
-        hfw=sys_state.hfw,
-        beam_type=sys_state.beam_type,
+        dwell_time=beam_state["dwellTime"][0],
+        hfw=beam_state["horizontalFoV"][0],
+        beam_type=beam_type,
         path=path,
         filename=filename,
         save=True,
         autocontrast=False,
     )
 
+    microscope_state = MicroscopeState.from_odemis_dict(system_state)
+    microscope_state.timestamp = md.get(model.MD_ACQ_DATE)
     image_md = FibsemImageMetadata(
         image_settings=image_settings,
         pixel_size=pixel_size,
-        microscope_state=ms,
+        microscope_state=microscope_state,
         # TODO: the rest of the metadata is not saved in the odemis metadata
     )
 
@@ -210,10 +243,18 @@ def from_odemis_image(image: model.DataArray, path: str = None) -> FibsemImage:
     return FibsemImage(data=da, metadata=image_md)
 
 
-def load_odemis_image(path: str) -> FibsemImage:
-    """Load an odemis image from a file and convert it to a FibsemImage"""
+def load_odemis_image(path: str, system_state: dict) -> FibsemImage:
+    """Load an Odemis image with a separate recorded system-state dictionary.
+
+    :param path: Path to the Odemis reference image file.
+    :param system_state: Recorded microscope settings indexed by Odemis component
+        role, captured when the image was acquired rather than read from live hardware.
+    :returns: Image with the recorded acquisition settings in fibsemOS format.
+    """
     acq = open_acquisition(path)
-    image: FibsemImage = FibsemImage.from_odemis(acq[0], path=path)
+    image: FibsemImage = FibsemImage.from_odemis(
+        acq[0], path=path, system_state=system_state
+    )
     return image
 
 

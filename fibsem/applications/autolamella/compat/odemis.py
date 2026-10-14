@@ -16,11 +16,12 @@ from fibsem.applications.autolamella.structures import (
 )
 from fibsem.applications.autolamella.workflows.core import log_status_message
 from fibsem.microscopes.odemis_microscope import add_odemis_path
-from fibsem.structures import FibsemImage, FibsemStagePosition
+from fibsem.structures import FibsemImage, FibsemStagePosition, MicroscopeState
 from fibsem.utils import save_yaml
 
 add_odemis_path()
 
+from odemis import model
 from odemis.acq.feature import CryoFeature, read_features
 from odemis.acq.milling.tasks import MillingTaskSettings  # noqa: E402
 from odemis.acq.move import FM_IMAGING, MILLING, SEM_IMAGING
@@ -40,9 +41,11 @@ def create_lamella_from_feature(
 
     pos = FibsemStagePosition.from_odemis_dict(feature_position)
 
-    # get the microscope state from the reference image
-    image: FibsemImage = FibsemImage.load_odemis_image(reference_image_path)
-    state = deepcopy(image.metadata.microscope_state)
+    # Read the recorded state from the feature instead of the reference image.
+    state = MicroscopeState.from_odemis_dict(feature.system_state)
+    state.timestamp = None
+    if feature.reference_image is not None:
+        state.timestamp = feature.reference_image.metadata.get(model.MD_ACQ_DATE)
 
     # create the lamella with the correct state
     lamella = Lamella(
@@ -66,18 +69,30 @@ def create_lamella_from_feature(
     lamella.state.microscope_state.stage_position.name = lamella.petname
 
     # save the reference image in required format and location
-    save_reference_image(reference_image_path, lamella.path)
+    save_reference_image(
+        reference_image_path, lamella.path, system_state=feature.system_state
+    )
 
     return lamella
 
 
 def save_reference_image(
-    odemis_image_path: str, path: str, filename: str = "ref_alignment_ib"
+    odemis_image_path: str,
+    path: str,
+    system_state: dict,
+    filename: str = "ref_alignment_ib",
 ) -> None:
-    """Save odemis reference image as fibsem image for use in autolamella alignment."""
+    """Save an Odemis reference image for AutoLamella alignment.
+
+    :param odemis_image_path: Path to the Odemis reference image file.
+    :param path: Directory in which to save the converted image.
+    :param system_state: Recorded microscope settings indexed by Odemis component
+        role, captured during reference image acquisition and stored with the feature.
+    :param filename: Output image filename without the extension.
+    """
 
     # open odemis image, and convert to fibsem
-    image = FibsemImage.load_odemis_image(odemis_image_path)
+    image = FibsemImage.load_odemis_image(odemis_image_path, system_state=system_state)
 
     # adjust md
     image.metadata.image_settings.save = True
