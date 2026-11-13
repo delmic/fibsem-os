@@ -8,6 +8,7 @@ import numpy as np
 from psygnal import Signal
 
 from fibsem.microscope import FibsemMicroscope, ThermoMicroscope
+from fibsem.microscopes.simulator import DemoMicroscope
 from fibsem.microscopes.tescan import TescanMicroscope
 from fibsem.structures import (
     ACTIVE_MILLING_STATES,
@@ -1009,3 +1010,8 @@ class OdemisTescanMicroscope(TescanMicroscope):
         super().__init__(system_settings=system_settings)
         logging.info("OdemisTescanMicroscope initialized")
 
+
+class OdemisDemoMicroscope(DemoMicroscope):
+    """Simulate milling with image and beam state independent of Odemis."""
+
+    supports_milling_alignment = False
